@@ -6,9 +6,29 @@ handle_error() {
     exit 1
 }
 
-# Create and activate virtual environment
-echo "Creating and activating virtual environment..."
-python3 -m venv piracer_env || handle_error "Failed to create virtual environment"
+# Function to clean up
+cleanup() {
+    echo "Cleaning up..."
+    kill $CANDUMP_PID 2>/dev/null
+    kill $INSTRUMENT_CLUSTER_PID 2>/dev/null
+    deactivate 2>/dev/null
+    echo "Script execution interrupted."
+    exit
+}
+
+# Set up trap for cleanup
+trap cleanup INT TERM
+
+# Check if virtual environment exists
+if [ ! -d "piracer_env" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv piracer_env || handle_error "Failed to create virtual environment"
+else
+    echo "Virtual environment already exists. Skipping creation."
+fi
+
+# Activate virtual environment
+echo "Activating virtual environment..."
 source piracer_env/bin/activate || handle_error "Failed to activate virtual environment"
 
 # Install required libraries
@@ -53,8 +73,6 @@ if __name__ == '__main__':
 EOF
 
 # Clean up
-kill $CANDUMP_PID
-kill $INSTRUMENT_CLUSTER_PID
-deactivate
+cleanup
 
 echo "Script execution completed."
