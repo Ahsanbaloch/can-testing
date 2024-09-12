@@ -16,7 +16,7 @@ cleanup() {
     exit
 }
 
-# Set up trap for cleanup
+# Set up trap for clean exit
 trap cleanup INT TERM
 
 # Check if virtual environment exists
@@ -37,7 +37,13 @@ pip install piracer-py || handle_error "Failed to install piracer-py"
 
 # Set up CAN interface
 echo "Setting up CAN interface..."
-sudo ip link set can0 up type can bitrate 500000 || handle_error "Failed to set up CAN interface"
+if ! ip link show can0 &> /dev/null; then
+    sudo ip link set can0 up type can bitrate 500000 || handle_error "Failed to set up CAN interface"
+else
+    echo "CAN interface already exists. Reconfiguring..."
+    sudo ip link set can0 down
+    sudo ip link set can0 up type can bitrate 500000 || handle_error "Failed to reconfigure CAN interface"
+fi
 
 # Start candump in the background
 echo "Starting candump..."
@@ -58,18 +64,39 @@ echo "Running the Python script..."
 python3 - << EOF
 from piracer.vehicles import PiRacerStandard
 from piracer.gamepads import ShanWanGamepad
+import signal
+import sys
+import time
+
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == '__main__':
     shanwan_gamepad = ShanWanGamepad()
     piracer = PiRacerStandard()
 
-    while True:
-        gamepad_input = shanwan_gamepad.read_data()
-        throttle = gamepad_input.analog_stick_right.y * 0.5
-        steering = gamepad_input.analog_stick_left.x
-        print(f'throttle={throttle}, steering={steering}')
-        piracer.set_throttle_percent(throttle)
-        piracer.set_steering_percent(steering)
+    try:
+        while True:
+            try:
+                gamepad_input = shanwan_gamepad.read_data()
+                throttle = gamepad_input.analog_stick_right.y * 0.5
+                steering = gamepad_input.analog_stick_left.x
+                print(f'throttle={throttle}, steering={steering}')
+                piracer.set_throttle_percent(throttle)
+                piracer.set_steering_percent(steering)
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                time.sleep(1)  # Wait a bit before trying again
+    except KeyboardInterrupt:
+        print("Keyboard interrupt received. Exiting...")
+    finally:
+        # Perform any necessary cleanup
+        piracer.set_throttle_percent(0)
+        piracer.set_steering_percent(0)
+        print("PiRacer stopped.")
 EOF
 
 # Clean up
