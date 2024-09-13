@@ -82,16 +82,15 @@ if __name__ == '__main__':
         while True:
             try:
                 gamepad_input = shanwan_gamepad.read_data()
-                # throttle = gamepad_input.analog_stick_right.y * 0.5
+                throttle = gamepad_input.analog_stick_right.y * 0.5
                 # steering = gamepad_input.analog_stick_left.x
-                throttle = max(min(gamepad_input.analog_stick_right.y * 0.5, 0.3), -0.3)
+                #throttle = max(min(gamepad_input.analog_stick_right.y * 0.5, 0.3), -0.3)
                 steering = max(min(gamepad_input.analog_stick_left.x * 0.5, 0.5), -0.5)
                 print(f'throttle={throttle}, steering={steering}')
                 piracer.set_throttle_percent(throttle)
                 piracer.set_steering_percent(steering)
             except Exception as e:
                 print(f"An error occurred: {e}")
-                time.sleep(1)  # Wait a bit before trying again
     except KeyboardInterrupt:
         print("Keyboard interrupt received. Exiting...")
     finally:
