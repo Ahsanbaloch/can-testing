@@ -82,8 +82,10 @@ if __name__ == '__main__':
         while True:
             try:
                 gamepad_input = shanwan_gamepad.read_data()
-                throttle = gamepad_input.analog_stick_right.y * 0.5
-                steering = gamepad_input.analog_stick_left.x
+                # throttle = gamepad_input.analog_stick_right.y * 0.5
+                # steering = gamepad_input.analog_stick_left.x
+                throttle = max(min(gamepad_input.analog_stick_right.y * 0.5, 0.3), -0.3)
+                steering = max(min(gamepad_input.analog_stick_left.x * 0.5, 0.5), -0.5)
                 print(f'throttle={throttle}, steering={steering}')
                 piracer.set_throttle_percent(throttle)
                 piracer.set_steering_percent(steering)
